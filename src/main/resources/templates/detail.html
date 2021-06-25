@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <link rel="stylesheet" href="/css/detail.css">
+</head>
+<body>
+<div class="todo-list-header">
+    <h2>List</h2>
+    
+    <form onsubmit="return createTodo()" id="editorForm">
+        <div>
+            <input type="hidden" name="id" id="id">
+            <input type="text" placeholder="TodoList" id="listid" required>
+        </div>
+       <div>
+           <input type="text" placeholder="header" id="header" required>
+       </div>
+        <div>
+            <input type="text" placeholder="content" id="content" required>
+        </div>
+        <div>
+            <input type="date" placeholder="finishtime" id="finishtime" required>
+        </div>
+        <div>
+            <button type="button" class="btn" onclick="createTodo('edit')">提交</button>
+            <input class="btn" type="submit" value="添加">
+            <button type="button" class="btn" onclick="location.href = '/index'">返回</button>
+        </div>
+    </form>
+</div>
+
+<div class="sort-wrap">
+   <span>排序规则</span>
+    <select onchange="sortTodo.call(this)">
+        <option value="1">名称</option>
+        <option value="2">创建日期</option>
+        <option value="3">截止日期</option>
+    </select>
+</div>
+
+<div class="todo-list-body">
+
+
+</div>
+
+<script type="text/javascript" src="/js/request.js" ></script>
+<script type="text/javascript" >
+
+    function getParams(name){
+        var query = window.location.search.substring(1);
+        var vars = query.split("&");
+        for (var i=0;i<vars.length;i++) {
+            var pair = vars[i].split("=");
+            if(pair[0] === name){return pair[1];}
+        }
+        return false;
+    }
+
+    let name = decodeURI(getParams('name'))
+
+    $('.todo-list-header>h2').innerText = name
+    $('#listid').value = name
+
+    function init(handler){
+        ajax({
+            method: 'GET',
+            url: '/todo/find?listid='+ name,
+        }, function (res){
+            let resp = JSON.parse(res)
+            if (handler){
+                resp  = handler(resp)
+            }
+            $('.todo-list-body').innerHTML = ''
+            resp.forEach(item =>{
+                $('.todo-list-body').innerHTML += `
+                <div>
+                    <div>
+                        <input type="checkbox" ${item.done && 'checked'} onchange="done.call(this, ${item.id})" >
+                        <h2 class="header">${item.header}</h2>
+                    </div>
+                    <p class="detail" >${item.content}</p>
+
+                    <p class="finishtime">${item.finishtime}</p>
+                    <div class="btn-group">
+                        <button class="btn" onclick="editTodo.call(this, ${item.id})">编辑</button>
+                        <button class="btn delete" onclick="removeTodo(${item.id})">删除</button>
+                    </div>
+                </div>
+            `
+            })
+        })
+    }
+
+    init()
+
+    function createTodo(type){
+        let params = ['listid='+ name, 'header='+ $('#header').value, 'content='+ $('#content').value, 'finishtime='+ $('#finishtime').value]
+
+        if (type){
+            params.push('Id='+ $('#id').value)
+            ajax({
+                method: 'PUT',
+                url: '/todo/set',
+                contentType: 'application/x-www-form-urlencoded',
+                data: params.join('&')
+            }, function (res){
+                alert(res)
+                location.reload()
+            })
+        }else {
+            ajax({
+                method: 'POST',
+                url: '/todo/add',
+                contentType: 'application/x-www-form-urlencoded',
+                data: params.join('&')
+            }, function (res){
+                alert(res)
+                location.reload()
+            })
+        }
+
+        return false
+    }
+
+
+    function editTodo(id){
+       $('#header').value = this.parentNode.parentNode.querySelector('.header').innerText
+       $('#content').value = this.parentNode.parentNode.querySelector('.detail').innerText
+       $('#finishtime').value = this.parentNode.parentNode.querySelector('.finishtime').innerText
+       $('#id').value = id
+       document.body.scrollTop  = 0
+    }
+
+
+    function removeTodo(id){
+        ajax({
+            url: '/todo/delete',
+            method: 'DELETE',
+            contentType: 'application/x-www-form-urlencoded',
+            data: 'Id='+ id
+        }, function (res){
+            alert(res)
+            location.reload()
+        })
+    }
+
+    function done(id){
+        ajax({
+            url: `/todo/${this.checked ? 'done': 'undone'}`,
+            method: 'PUT',
+            contentType: 'application/x-www-form-urlencoded',
+            data: 'Id='+ id
+        }, function (res){
+            alert(res)
+            location.reload()
+        })
+    }
+
+
+    function sortTodo(){
+        let value = this.value
+        init(function (res){
+            console.log(value)
+            if (value == 1){
+               return  res.sort((a, b) =>{
+                    return a.header - b.header
+                })
+            }else if (value == 2){
+                return  res.sort((a, b) =>{
+                    return new Date(a.createtime) - new Date(b.createtime)
+                })
+            }else if (value == 3){
+                return  res.sort((a, b) =>{
+                    return new Date(a.finishtime) - new Date(b.finishtime)
+                })
+            }
+        })
+    }
+
+</script>
+
+
+</body>
+</html>

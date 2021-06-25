@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <link rel="stylesheet" href="/css/index.css">
+</head>
+<body>
+    <div class="todo-list-header">
+        <h2>ToDoList</h2>
+        <form onsubmit="return createTodoList()">
+            <input type="search" required id="list-name">
+        </form>
+    </div>
+    <div class="todo-list-body">
+
+    </div>
+
+
+    <div class="mask hidden">
+        <div class="tip-panel">
+            <div class="todo-list-body">
+
+            </div>
+        </div>
+    </div>
+
+
+    <script type="text/javascript" src="/js/request.js" ></script>
+    <script type="text/javascript" >
+
+
+        ajax({
+            method: 'GET',
+            url: '/todolist/all'
+        }, function (res){
+            let list = []
+            res = JSON.parse(res)
+            res.forEach((item, index) =>{
+                $('.todo-list-body').innerHTML += ` <div>
+                <input type="text" value="${item.name}" readonly disabled >
+                <div class="btn-group">
+                    <button class="btn" onclick="location.href = '/detail?name=${item.name}'">详情</button>
+                    <button class="btn delete" onclick="removeByName('${item.name}')">删除</button>
+                </div>
+            </div>`
+                ajax({
+                    method: 'GET',
+                    url: '/todo/find?listid='+ item.name,
+                }, function (resp){
+                    JSON.parse(resp).forEach(el =>{
+                        console.log(isSameDay(new Date(), new Date(el.finishtime)), new Date(el.finishtime))
+                        if (isSameDay(new Date(), new Date(el.finishtime))){
+                            item.detail = el.header
+                            item.finishtime = el.finishtime
+                            list.push(item)
+                        }
+                    })
+                    if (res.length === index +1){
+                        if (list.length){
+                            list.forEach(item =>{
+                                $('.tip-panel').innerHTML += `
+                        <div class="todo-list-body">
+                            <div>
+                                <input type="text" value="${item.detail}" readonly disabled >
+                                <div class="btn-group">
+                                    <button class="btn" onclick="location.href = '/detail?name=${item.name}'">${item.finishtime}</button>
+                                </div>
+                            </div>
+                        </div>
+                    `
+                            })
+                            $('.mask').classList.remove('hidden')
+                        }
+                    }
+                })
+            })
+
+        })
+
+
+        function isSameDay(startTime, endTime) {
+            const startTimeMs = new Date(startTime).setHours(0,0,0,0);
+            const endTimeMs = new Date(endTime).setHours(0,0,0,0);
+            return startTimeMs === endTimeMs ? true : false
+        }
+
+        function createTodoList(){
+            ajax({
+                method: 'POST',
+                url: '/todolist/add',
+                contentType: 'application/x-www-form-urlencoded',
+                data: 'name='+ $('#list-name').value
+            }, function (res){
+                alert(res)
+                location.reload()
+            })
+            return false
+        }
+
+        function removeByName(name){
+            ajax({
+                method: 'DELETE',
+                url: '/todolist/delete',
+                contentType: 'application/x-www-form-urlencoded',
+                data: 'name='+ name,
+            }, function (res){
+                alert(res)
+                location.reload()
+            })
+        }
+
+
+
+
+    </script>
+
+
+
+</body>
+</html>
